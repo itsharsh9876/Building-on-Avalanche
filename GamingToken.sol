@@ -1,50 +1,84 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.0.0/contracts/token/ERC20/ERC20.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.0.0/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract DegenToken is ERC20, Ownable {
+contract DegenGamingToken is ERC20 {
 
+    address public owner;
+    string[] public redeemableItems;
+    mapping(uint256 => uint256) public itemCosts;
+    mapping(address => mapping(uint256 => bool)) public itemRedeemed;
 
-    event Redeem(address indexed from, uint256 amount);
-    event Burn(address indexed from, uint256 amount);
+    event ItemRedeemed(address indexed user, uint256 indexed itemId, uint256 cost);
 
-    constructor() ERC20("Degen", "DGN") {
+    constructor() ERC20("DegenToken", "DGN") { 
+        owner = msg.sender;
+
+        redeemableItems.push("Item 1");
+        redeemableItems.push("Item 2");
+        redeemableItems.push("Item 3");
+        redeemableItems.push("Item 4");
+
+        itemCosts[0] = 5;  // Example cost for Item 1
+        itemCosts[1] = 10; // Example cost for Item 2
+        itemCosts[2] = 15; // Example cost for Item 3 
+        itemCosts[3] = 50; // Example cost for Item 4
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner allowed to execute this function");
+        _;
+    }
+
+    function mintTokens(address to, uint256 amount) public onlyOwner {
         require(to != address(0), "Unable to mint to a zero address");
         _mint(to, amount);
     }
 
-    function redeem(uint256 amount) public {
-        address from = _msgSender();
-        require(balanceOf(from) >= amount, "Not enough balance");
-        _burn(from, amount);
-        emit Redeem(from, amount);
-    }
-
-    function burn(uint256 amount) public {
-        address from = _msgSender();
-        require(balanceOf(from) >= amount, "Not enough balance");
-        _burn(from, amount);
-        emit Burn(from, amount);
-    }
-
-    function transfer(address to, uint256 amount) public override returns (bool) {
+    function transferTokens(address to, uint256 amount) public returns (bool) {
         require(to != address(0), "Cannot transfer to zero address");
         return super.transfer(to, amount);
     }
 
-    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
-        require(from != address(0), "Cannot transfer from zero address");
-        require(to != address(0), "Cannot transfer to zero address");
-        return super.transferFrom(from, to, amount);
+    function claimReward(uint256 itemId) public {
+        require(itemId < redeemableItems.length, "Item does not exist");
+        uint256 cost = itemCosts[itemId];
+        require(getBalance(msg.sender) >= cost, "Insufficient balance");
+        require(!itemRedeemed[msg.sender][itemId], "Item already redeemed");
+
+        _burn(msg.sender, cost);
+        itemRedeemed[msg.sender][itemId] = true;
+        emit ItemRedeemed(msg.sender, itemId, cost);
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function checkClaims(address user) public view returns (bool[] memory) {
+        bool[] memory redeemed = new bool[](redeemableItems.length); 
+        for (uint256 i = 0; i < redeemableItems.length; i++) {
+            redeemed[i] = itemRedeemed[user][i];
+        }
+        return redeemed;
+    }
+
+    function getBalance(address account) public view returns (uint256) {
         return super.balanceOf(account);
     }
-}
 
+    // Renamed functions to be less intuitive
+    function getSign() public view returns (string memory) {
+        return symbol();
+    }
+
+    function getLabel() public view returns (string memory) {
+        return name();
+    }
+
+    function listRewards() public view returns (string[] memory) {
+        return redeemableItems;
+    }
+
+    function getRewardCost(uint256 itemId) public view returns (uint256) {
+        require(itemId < redeemableItems.length, "Item does not exist");
+        return itemCosts[itemId];
+    }
+}
