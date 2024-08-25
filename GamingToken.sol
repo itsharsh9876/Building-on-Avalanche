@@ -11,6 +11,7 @@ contract DegenGamingToken is ERC20 {
     mapping(address => mapping(uint256 => bool)) public itemRedeemed;
 
     event ItemRedeemed(address indexed user, uint256 indexed itemId, uint256 cost);
+    event TokensBurned(address indexed user, uint256 amount);
 
     constructor() ERC20("DegenToken", "DGN") { 
         owner = msg.sender;
@@ -41,6 +42,14 @@ contract DegenGamingToken is ERC20 {
         return super.transfer(to, amount);
     }
 
+    function burn(uint256 amount) public {
+        require(amount > 0, "Amount must be greater than zero");
+        require(balanceOf(msg.sender) >= amount, "Insufficient balance to burn");
+
+        _burn(msg.sender, amount);
+        emit TokensBurned(msg.sender, amount);
+    }
+
     function claimReward(uint256 itemId) public {
         require(itemId < redeemableItems.length, "Item does not exist");
         uint256 cost = itemCosts[itemId];
@@ -64,15 +73,7 @@ contract DegenGamingToken is ERC20 {
         return super.balanceOf(account);
     }
 
-    // Renamed functions to be less intuitive
-    function getSign() public view returns (string memory) {
-        return symbol();
-    }
-
-    function getLabel() public view returns (string memory) {
-        return name();
-    }
-
+    
     function listRewards() public view returns (string[] memory) {
         return redeemableItems;
     }
