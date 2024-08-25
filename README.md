@@ -44,12 +44,11 @@ Further steps,
 
 ```
 //
-    function redeem(uint256 amount) public {
-        address from = _msgSender();
-        require(balanceOf(from) >= amount, "Not enough balance");
-        _burn(from, amount);
-        emit Redeem(from, amount);
-    }
+       function claimReward(uint256 itemId) public {
+        require(itemId < redeemableItems.length, "Item does not exist");
+        uint256 cost = itemCosts[itemId];
+        require(getBalance(msg.sender) >= cost, "Insufficient balance");
+        require(!itemRedeemed[msg.sender][itemId], "Item already redeemed");
 ```
 
 ## Authors
